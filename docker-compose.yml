@@ -1,0 +1,33 @@
+version: '3'
+services:
+
+ sensoren:
+  build: ./Sensor
+  container_name: sensor
+  working_dir: /Sensor
+  command: "gradle run --quiet"
+  environment:
+  - SERVER=zentrale
+  depends_on: 
+  - zentrale
+  
+ zentrale:
+  build: ./Zentrale
+  container_name: zentrale
+  ports:
+  - 4711:4711/udp
+  - 8000:8000/tcp
+  working_dir: /Zentrale
+  command: "gradle run --quiet"
+  
+ externerclient:
+   build: ./externerClient
+   container_name: externerclient
+   ports:
+   - 9090:9090/tcp
+   working_dir: /externerClient
+   command: "gradle run --quiet" 
+   environment:
+   - SERVER=zentrale
+   depends_on: 
+   - zentrale

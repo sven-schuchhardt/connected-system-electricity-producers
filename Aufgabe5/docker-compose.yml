@@ -1,0 +1,106 @@
+version: '3'
+services:
+
+
+ broker1:
+   image: eclipse-mosquitto:1.6
+   container_name: mqtt_broker1
+   restart: always
+   volumes:
+    - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
+    
+ broker2:
+   image: eclipse-mosquitto:1.6
+   container_name: mqtt_broker2
+   restart: always
+   volumes:
+    - ./mosquitto/mosquitto2.conf:/mosquitto/config/mosquitto.conf
+   
+ sensoren1:
+  build: ./Sensor
+  container_name: sensor1
+  working_dir: /Sensor
+  command: "gradle run --quiet"
+  environment:
+  - SERVER=broker1
+  - DESTINATION=zentrale1
+  - BROKER_PORT=1885
+  - PUBLISHER_PORT=4711
+  - NAME=sensoren1
+  depends_on: 
+    - broker1
+    
+ sensoren2:
+  build: ./Sensor
+  container_name: sensor2
+  working_dir: /Sensor
+  command: "gradle run --quiet"
+  environment:
+  - SERVER=broker2
+  - DESTINATION=zentrale2
+  - BROKER_PORT=1890
+  - PUBLISHER_PORT=4715
+  - NAME=sensoren2
+  depends_on: 
+    - broker2
+  
+ zentrale1:
+  build: ./Zentrale
+  container_name: zentrale1
+  ports:
+  - 4711:4711/udp
+  - 8000:8000/tcp
+  - 1885:1885/tcp
+  working_dir: /Zentrale
+  command: "gradle run --quiet"
+  environment:
+   - SERVER=broker1
+   - BROKER_PORT=1885
+   - TCP_PORT=8000
+   - ZENTRAL_NAME=zentrale
+   - NAME=zentrale1
+   - TYP=master
+   - ZENTRALEN_PORT1=1010
+  depends_on:
+    - broker1
+        
+ zentrale2:
+  build: ./Zentrale
+  container_name: zentrale2
+  ports:
+  - 4715:4715/udp
+  - 8001:8001/tcp
+  - 1890:1890/tcp
+  working_dir: /Zentrale
+  command: "gradle run --quiet"
+  environment:
+   - SERVER=broker2
+   - BROKER_PORT=1890
+   - TCP_PORT=8001
+   - ZENTRAL_NAME=zentrale
+   - NAME=zentrale2
+   - TYP=slave
+   - TYP_IP=zentrale1
+   - ZENTRALEN_PORT1=1010
+  depends_on:
+    - broker2  
+    - zentrale1
+  
+ externerclient:
+   build: ./externerClient
+   container_name: externerclient1
+   ports:
+   - 9090:9090/tcp
+   - 1010:1010/tcp
+   - 2020:2020/tcp
+   working_dir: /externerClient
+   command: "gradle run --quiet" 
+   environment:
+   - ZENTRALE1=zentrale1
+   - ZENTRALE1_PORT=9090
+   - ZENTRALE2=zentrale2
+   - ZENTRALE2_PORT=9095
+   depends_on:
+   - zentrale1
+   - zentrale2
+  
